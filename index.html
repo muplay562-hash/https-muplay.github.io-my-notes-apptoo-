@@ -65,6 +65,8 @@
 <div class="sidebar">
     <h2>Folders</h2>
     <button onclick="createFolder()">+ New Folder</button>
+    <button onclick="renameFolder()">Rename Folder</button>
+    <button onclick="deleteFolder()">Delete Folder</button>
     <div id="foldersList"></div>
 
     <h2>Notes</h2>
@@ -76,9 +78,36 @@
     <input id="titleInput" placeholder="Note Title" style="padding:8px; font-size:16px; margin-bottom:10px;">
     <textarea id="editor" placeholder="Select or create a note..."></textarea>
     <button onclick="deleteNote()">Delete Note</button>
+    <button onclick="moveNote()">Move Note</button>
 </div>
 
+<!-- Firebase App (core SDK) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+
+<!-- Firebase Firestore -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
 <script>
+// 🔥 Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB9YdE_tSX0v31dYp_L2oxiPRWqSdiGlVU",
+  authDomain: "notes-cloud-app-cdfa2.firebaseapp.com",
+  projectId: "notes-cloud-app-cdfa2",
+  storageBucket: "notes-cloud-app-cdfa2.firebasestorage.app",
+  messagingSenderId: "1058723242377",
+  appId: "1:1058723242377:web:e5d1dbcbaa19dfd1f6c158"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Initialize Firestore
+const db = firebase.firestore();
+
+// ==============================
+// YOUR EXISTING APP CODE BELOW
+// ==============================
+
 let folders = JSON.parse(localStorage.getItem("folders")) || [];
 let currentFolderIndex = null;
 let currentNoteIndex = null;
@@ -92,6 +121,8 @@ function saveData() {
     localStorage.setItem("folders", JSON.stringify(folders));
 }
 
+// (Keep the rest of your existing functions exactly as they are below this line)
+    
 // ===== Folder Functions =====
 function renderFolders() {
     foldersList.innerHTML = "";
@@ -119,6 +150,87 @@ function selectFolder(index) {
     currentFolderIndex = index;
     currentNoteIndex = null;
     renderFolders();
+    renderNotes();
+}
+
+function renameFolder() {
+    if (currentFolderIndex === null) {
+        alert("Select a folder first!");
+        return;
+    }
+    const newName = prompt("Enter new folder name:", folders[currentFolderIndex].name);
+    if (!newName) return;
+    folders[currentFolderIndex].name = newName;
+    saveData();
+    renderFolders();
+}
+
+function deleteFolder() {
+    if (currentFolderIndex === null) {
+        alert("Select a folder first!");
+        return;
+    }
+
+    const confirmDelete = confirm(
+        `Are you sure you want to delete "${folders[currentFolderIndex].name}" and all its notes?`
+    );
+
+    if (!confirmDelete) return;
+
+    folders.splice(currentFolderIndex, 1);
+
+    currentFolderIndex = null;
+    currentNoteIndex = null;
+
+    titleInput.value = "";
+    editor.value = "";
+
+    saveData();
+    renderFolders();
+    renderNotes();
+}
+
+function moveNote() {
+    if (currentFolderIndex === null || currentNoteIndex === null) {
+        alert("Select a note first!");
+        return;
+    }
+
+    if (folders.length < 2) {
+        alert("You need at least two folders to move notes.");
+        return;
+    }
+
+    let folderNames = folders
+        .map((folder, index) => `${index}: ${folder.name}`)
+        .join("\n");
+
+    let targetIndex = prompt(
+        "Move to which folder?\n\n" + folderNames,
+        ""
+    );
+
+    targetIndex = Number(targetIndex);
+
+    if (
+        isNaN(targetIndex) ||
+        targetIndex < 0 ||
+        targetIndex >= folders.length ||
+        targetIndex === currentFolderIndex
+    ) {
+        alert("Invalid folder selection.");
+        return;
+    }
+
+    const noteToMove = folders[currentFolderIndex].notes.splice(currentNoteIndex, 1)[0];
+
+    folders[targetIndex].notes.push(noteToMove);
+
+    currentNoteIndex = null;
+    titleInput.value = "";
+    editor.value = "";
+
+    saveData();
     renderNotes();
 }
 
@@ -186,6 +298,5 @@ editor.addEventListener("input", () => {
 renderFolders();
 renderNotes();
 </script>
-    
 </body>
 </html>
